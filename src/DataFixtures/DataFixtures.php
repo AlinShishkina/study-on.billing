@@ -41,21 +41,21 @@ class DataFixtures extends Fixture
     {
         $this->transactions = [
             [
-                "create_at" => date('Y-m-dTH:i:s', time() - 2 * 24 * 60 * 60),
+                "created_at" => date('Y-m-dTH:i:s', time() - 2 * 24 * 60 * 60),
                 "type" => "payment",
                 "course_code" => "php",
                 "amount" => 2500,
                 'expires_at' => null,
             ],
             [
-                "create_at" => date('Y-m-dTH:i:s', time()),
+                "created_at" => date('Y-m-dTH:i:s', time()),
                 "type" => "payment",
                 "course_code" => "js",
                 "expires_at" => date('Y-m-dTH:i:s', time() + 7 * 24 * 60 * 60),
                 "amount" => 1000,
             ],
             [
-                "create_at" => date('Y-m-dTH:i:s', time() - 5 * 24 * 60 * 60),
+                "created_at" => date('Y-m-dTH:i:s', time() - 5 * 24 * 60 * 60),
                 "type" => "deposit",
                 "amount" => 100000,
                 'expires_at' => null,
@@ -91,7 +91,7 @@ class DataFixtures extends Fixture
             $transactionEntity->setAmount($transaction['amount']);
             $transactionEntity->setTypeName($transaction['type']);
             $transactionEntity->setClient($user);
-            $transactionEntity->setCreateAt(new \DateTimeImmutable($transaction['create_at']));
+            $transactionEntity->setCreatedAt(new \DateTimeImmutable($transaction['created_at']));
             if ($transaction['expires_at']) {
                 $transactionEntity->setExpiresAt(new \DateTimeImmutable($transaction['expires_at']));
             }

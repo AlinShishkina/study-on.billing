@@ -12,6 +12,9 @@ down:
 clear:
 	@${CONSOLE} cache:clear
 
+phpunit:
+	@${PHP} bin/phpunit
+
 migration:
 	@${CONSOLE} make:migration
 

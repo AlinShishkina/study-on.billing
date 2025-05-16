@@ -15,9 +15,9 @@ class TransactionTest extends AbstractTest
         return [AppFixtures::class, DataFixtures::class];
     }
 
-    public function testGetTransaction()
+    public function testGetTransaction(): void
     {
-        $client = $this->createTestClient();
+        $client = self::createTestClient();
         $token = $this->getToken($client);
 
         $client->request(
@@ -31,19 +31,21 @@ class TransactionTest extends AbstractTest
             ]
         );
 
-        $content = json_decode($client->getResponse()->getContent(), true);
-        $this->assertResponseCode(200);
-        $this->assertTrue(is_array($content));
+        $response = $client->getResponse();
+        $content = json_decode($response->getContent(), true);
+
+        $this->assertResponseOk($response);
+        $this->assertIsArray($content);
     }
 
-    public function testGetTransactionWithFilter()
+    public function testGetTransactionWithFilter(): void
     {
-        $client = $this->createTestClient();
+        $client = self::createTestClient();
         $token = $this->getToken($client);
 
         $filter = [
             'filter[type]' => 'payment',
-            'filter[skip_expired]' => true
+            'filter[skip_expired]' => 'true' // передаем как строку, т.к. в URL
         ];
 
         $client->request(
@@ -57,20 +59,21 @@ class TransactionTest extends AbstractTest
             ]
         );
 
-        $content = json_decode($client->getResponse()->getContent(), true);
+        $response = $client->getResponse();
+        $content = json_decode($response->getContent(), true);
 
-        $this->assertResponseCode(200);
-        $this->assertTrue(is_array($content));
+        $this->assertResponseOk($response);
+        $this->assertIsArray($content);
 
-        // проверка что нет записи депозита
+        // Проверка, что нет транзакций с типом 'deposit'
         $flagNotDeposit = true;
-        foreach ($content[0] as $item) {
-            if ($item['type'] == 'deposit') {
+        foreach ($content as $item) {
+            if (isset($item['type']) && $item['type'] === 'deposit') {
                 $flagNotDeposit = false;
                 break;
             }
         }
 
-        $this->assertTrue($flagNotDeposit);
+        $this->assertTrue($flagNotDeposit, 'В ответе не должно быть транзакций типа deposit');
     }
 }

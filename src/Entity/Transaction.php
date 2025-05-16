@@ -52,7 +52,6 @@ class Transaction
     public function setClient(?User $client): static
     {
         $this->client = $client;
-
         return $this;
     }
 
@@ -64,7 +63,6 @@ class Transaction
     public function setCourse(?Course $course): static
     {
         $this->course = $course;
-
         return $this;
     }
 
@@ -76,7 +74,6 @@ class Transaction
     public function setType(int $type): static
     {
         $this->type = $type;
-
         return $this;
     }
 
@@ -88,7 +85,6 @@ class Transaction
     public function setAmount(string $amount): static
     {
         $this->amount = $amount;
-
         return $this;
     }
 
@@ -100,7 +96,6 @@ class Transaction
     public function setCreatedAt(\DateTimeImmutable $createdAt): static
     {
         $this->createdAt = $createdAt;
-
         return $this;
     }
 
@@ -112,7 +107,6 @@ class Transaction
     public function setExpiresAt(?\DateTimeImmutable $expiresAt): static
     {
         $this->expiresAt = $expiresAt;
-
         return $this;
     }
 
@@ -126,7 +120,6 @@ class Transaction
         if (isset(self::TYPE_NAMES[$type])) {
             $this->type = self::TYPE_NAMES[$type];
         }
-
         return $this;
     }
 }

@@ -4,12 +4,9 @@ declare(strict_types=1);
 
 namespace App\Tests;
 
-use App\DataFixtures\AppFixtures;
-use App\DataFixtures\CourseFixtures;
 use Doctrine\Common\DataFixtures\Executor\ORMExecutor;
 use Doctrine\Common\DataFixtures\Loader;
 use Doctrine\Common\DataFixtures\Purger\ORMPurger;
-use Symfony\Bundle\FrameworkBundle\KernelBrowser;
 use Symfony\Bundle\FrameworkBundle\Test\WebTestCase;
 use Symfony\Component\DependencyInjection\ContainerAwareInterface;
 use Symfony\Component\DomCrawler\Crawler;
@@ -17,15 +14,16 @@ use Symfony\Component\HttpFoundation\Response;
 
 abstract class AbstractTest extends WebTestCase
 {
-    protected static $client;
+    protected static ?\Symfony\Bundle\FrameworkBundle\KernelBrowser $client = null;
 
-    protected static function createTestClient(array $options = [], array $server = [])
+    // Создание тестового клиента (одиночный экземпляр)
+    public static function createTestClient(array $options = [], array $server = []): \Symfony\Bundle\FrameworkBundle\KernelBrowser
     {
-        if (!static::$client) {
-            static::$client = static::createClient($options, $server);
+        if (self::$client === null) {
+            self::$client = static::createClient($options, $server);
         }
 
-        return static::$client;
+        return self::$client;
     }
 
     protected function setUp(): void
@@ -38,35 +36,26 @@ abstract class AbstractTest extends WebTestCase
     final protected function tearDown(): void
     {
         parent::tearDown();
-        static::$client = null;
+        self::$client = null;
     }
 
-    /**
-     * Shortcut
-     */
     protected static function getEntityManager()
     {
         return static::getContainer()->get('doctrine')->getManager();
     }
 
-    /**
-     * List of fixtures for certain test
-     */
     protected function getFixtures(): array
     {
         return [];
     }
 
-    /**
-     * Load fixtures before test
-     */
-    protected function loadFixtures(array $fixtures = [])
+    protected function loadFixtures(array $fixtures = []): void
     {
         $loader = new Loader();
 
         foreach ($fixtures as $fixture) {
             if (!\is_object($fixture)) {
-                $fixture = new $fixture($this->getEntityManager()->getConnection());
+                $fixture = new $fixture(self::getEntityManager()->getConnection());
             }
 
             if ($fixture instanceof ContainerAwareInterface) {
@@ -76,65 +65,44 @@ abstract class AbstractTest extends WebTestCase
             $loader->addFixture($fixture);
         }
 
-        $em = static::getEntityManager();
+        $em = self::getEntityManager();
         $purger = new ORMPurger($em);
         $executor = new ORMExecutor($em, $purger);
         $executor->execute($loader->getFixtures());
     }
 
-    public function assertResponseOk(
-        ?Response $response = null,
-        ?string $message = null,
-        string $type = 'text/html'
-    ) {
+    public function assertResponseOk(?Response $response = null, ?string $message = null, string $type = 'text/html'): void
+    {
         $this->failOnResponseStatusCheck($response, 'isOk', $message, $type);
     }
 
-    public function assertResponseRedirect(
-        ?Response $response = null,
-        ?string $message = null,
-        string $type = 'text/html'
-    ) {
+    public function assertResponseRedirect(?Response $response = null, ?string $message = null, string $type = 'text/html'): void
+    {
         $this->failOnResponseStatusCheck($response, 'isRedirect', $message, $type);
     }
 
-    public function assertResponseNotFound(
-        ?Response $response = null,
-        ?string $message = null,
-        string $type = 'text/html'
-    ) {
+    public function assertResponseNotFound(?Response $response = null, ?string $message = null, string $type = 'text/html'): void
+    {
         $this->failOnResponseStatusCheck($response, 'isNotFound', $message, $type);
     }
 
-    public function assertResponseForbidden(
-        ?Response $response = null,
-        ?string $message = null,
-        string $type = 'text/html'
-    ) {
+    public function assertResponseForbidden(?Response $response = null, ?string $message = null, string $type = 'text/html'): void
+    {
         $this->failOnResponseStatusCheck($response, 'isForbidden', $message, $type);
     }
 
-    public function assertResponseCode(
-        int $expectedCode,
-        ?Response $response = null,
-        ?string $message = null,
-        string $type = 'text/html'
-    ) {
+    public function assertResponseCode(int $expectedCode, ?Response $response = null, ?string $message = null, string $type = 'text/html'): void
+    {
         $this->failOnResponseStatusCheck($response, $expectedCode, $message, $type);
     }
-    /**
-     * @param Response $response
-     * @param string   $type
-     *
-     * @return string
-     */
-    public function guessErrorMessageFromResponse(Response $response, string $type = 'text/html')
+
+    public function guessErrorMessageFromResponse(Response $response, string $type = 'text/html'): string
     {
         try {
             $crawler = new Crawler();
             $crawler->addContent($response->getContent(), $type);
 
-            if (!\count($crawler->filter('title'))) {
+            if ($crawler->filter('title')->count() === 0) {
                 $add = '';
                 $content = $response->getContent();
 
@@ -142,10 +110,10 @@ abstract class AbstractTest extends WebTestCase
                     $data = json_decode($content);
                     if ($data) {
                         $content = json_encode($data, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE);
-                        $add = ' FORMATTED';
+                        $add = ' ОТФОРМАТИРОВАНО';
                     }
                 }
-                $title = '[' . $response->getStatusCode() . ']' . $add .' - ' . $content;
+                $title = '[' . $response->getStatusCode() . ']' . $add . ' - ' . $content;
             } else {
                 $title = $crawler->filter('title')->text();
             }
@@ -156,30 +124,25 @@ abstract class AbstractTest extends WebTestCase
         return trim($title);
     }
 
-    private function failOnResponseStatusCheck(
-        Response $response = null,
-        $func = null,
-        ?string $message = null,
-        string $type = 'text/html'
-    ) {
-        if (null === $func) {
+    private function failOnResponseStatusCheck(?Response $response = null, $func = null, ?string $message = null, string $type = 'text/html'): void
+    {
+        if ($func === null) {
             $func = 'isOk';
         }
 
-        if (null === $response && self::$client) {
+        if ($response === null && self::$client) {
             $response = self::$client->getResponse();
         }
 
         try {
-            if (\is_int($func)) {
+            if (is_int($func)) {
                 $this->assertEquals($func, $response->getStatusCode());
             } else {
                 $this->assertTrue($response->{$func}());
             }
-
             return;
         } catch (\Exception $e) {
-            // nothing to do
+            // Ошибка проверки — идём дальше
         }
 
         $err = $this->guessErrorMessageFromResponse($response, $type);
@@ -188,26 +151,26 @@ abstract class AbstractTest extends WebTestCase
         }
 
         if (is_int($func)) {
-            $template = "Failed asserting Response status code %s equals %s.";
+            $template = "Ожидался код ответа %s, получен %s.";
+            $message .= sprintf($template, $func, $response->getStatusCode());
         } else {
-            $template = "Failed asserting that Response[%s] %s.";
-            $func = preg_replace('#([a-z])([A-Z])#', '$1 $2', $func);
+            $template = "Не выполнено условие для ответа [%s]: %s.";
+            $funcFormatted = preg_replace('#([a-z])([A-Z])#', '$1 $2', $func);
+            $message .= sprintf($template, $response->getStatusCode(), $funcFormatted);
         }
 
-        $message .= sprintf($template, $response->getStatusCode(), $func, $err);
-
-        $max_length = 100;
-        if (mb_strlen($err, 'utf-8') < $max_length) {
+        $maxLength = 100;
+        if (mb_strlen($err, 'utf-8') < $maxLength) {
             $message .= " " . $this->makeErrorOneLine($err);
         } else {
-            $message .= " " . $this->makeErrorOneLine(mb_substr($err, 0, $max_length, 'utf-8') . '...');
+            $message .= " " . $this->makeErrorOneLine(mb_substr($err, 0, $maxLength, 'utf-8') . '...');
             $message .= "\n\n" . $err;
         }
 
         $this->fail($message);
     }
 
-    private function makeErrorOneLine($text)
+    private function makeErrorOneLine(string $text): string
     {
         return preg_replace('#[\n\r]+#', ' ', $text);
     }
