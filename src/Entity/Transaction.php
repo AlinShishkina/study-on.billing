@@ -11,8 +11,8 @@ use Doctrine\ORM\Mapping as ORM;
 class Transaction
 {
     public const TYPE_NAMES = [
-        'payment' => 1,
         'deposit' => 2,
+        'payment' => 1,
     ];
 
     #[ORM\Id]
@@ -33,10 +33,10 @@ class Transaction
     #[ORM\Column(type: Types::DECIMAL, precision: 10, scale: 2)]
     private ?string $amount = null;
 
-    #[ORM\Column]
+    #[ORM\Column(name: "created_at", type: Types::DATETIME_IMMUTABLE)]
     private ?\DateTimeImmutable $createdAt = null;
 
-    #[ORM\Column(nullable: true)]
+    #[ORM\Column(name: "expires_at", type: Types::DATETIME_IMMUTABLE, nullable: true)]
     private ?\DateTimeImmutable $expiresAt = null;
 
     public function getId(): ?int

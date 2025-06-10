@@ -15,7 +15,7 @@ use Symfony\Bridge\Doctrine\Validator\Constraints\UniqueEntity;
 class Course
 {
     use ToArrayTrait;
-    
+
     #[ORM\Id]
     #[ORM\GeneratedValue]
     #[ORM\Column]
@@ -35,6 +35,7 @@ class Course
      */
     #[ORM\OneToMany(targetEntity: Transaction::class, mappedBy: 'course')]
     private Collection $transactions;
+    
 
     public function __construct()
     {
@@ -54,7 +55,6 @@ class Course
     public function setCode(string $code): static
     {
         $this->code = $code;
-
         return $this;
     }
 
@@ -66,7 +66,6 @@ class Course
     public function setPrice(string $price): static
     {
         $this->price = $price;
-
         return $this;
     }
 
@@ -78,7 +77,6 @@ class Course
     public function setType(int $type): static
     {
         $this->type = $type;
-
         return $this;
     }
 
@@ -96,47 +94,36 @@ class Course
             $this->transactions->add($transaction);
             $transaction->setCourse($this);
         }
-
         return $this;
     }
 
     public function removeTransaction(Transaction $transaction): static
     {
         if ($this->transactions->removeElement($transaction)) {
-            // set the owning side to null (unless already changed)
             if ($transaction->getCourse() === $this) {
                 $transaction->setCourse(null);
             }
         }
-
         return $this;
     }
 
     public function getTypeName(): string
     {
-        switch ($this->type) {
-            case 1:
-                return 'free';
-            case 2:
-                return 'rent';
-            case 3:
-                return 'buy';
-            default:
-                return 'unknown';
-        }
+        return match ($this->type) {
+            1 => 'free',
+            2 => 'rent',
+            3 => 'buy',
+            default => 'unknown',
+        };
     }
 
-    
-
-    public function setTypeName($type)
+    public function setTypeName(string $type): static
     {
-        switch ($type) {
-            case 'free':
-                return $this->setType(1);
-            case 'rent':
-                return $this->setType(2);
-            case 'buy':
-                return $this->setType(3);
-        }
+        return match ($type) {
+            'free' => $this->setType(1),
+            'rent' => $this->setType(2),
+            'buy' => $this->setType(3),
+            default => $this,
+        };
     }
 }
