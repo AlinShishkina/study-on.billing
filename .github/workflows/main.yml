@@ -39,6 +39,7 @@ jobs:
           docker-compose --version
           docker-compose build
           docker-compose up -d
+          docker network create study-onbilling_default
           docker ps -a
       - name: Setting JWT
         run: |

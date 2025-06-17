@@ -70,4 +70,5 @@ services:
 networks:
   default:
     external: true
+    driver: bridge
     name: study-onbilling_default
