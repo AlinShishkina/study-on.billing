@@ -21,18 +21,17 @@ jobs:
           coverage: pcov
           tools: composer
       - name: Setting environment and composer
-        #        тут тоже что-то можно изменить :)
+#        тут тоже что-то можно изменить :)
         run: |
           git config --global --add safe.directory /app
           cat << EOF > .env.local
-          DATABASE_URL="pgsql://pguser:pguser@study-onbilling-postgres-1:5432/study_on"
+          DATABASE_URL="pgsql://postgres:admin@study-onbilling-postgres-1:5432/study_on"
           JWT_SECRET_KEY="%kernel.project_dir%/config/jwt/private.pem"
           JWT_PUBLIC_KEY="%kernel.project_dir%/config/jwt/public.pem"
           JWT_PASSPHRASE="1234"
           EOF
           cat .env.local
-      - name: Fix permissions
-        run: sudo chown -R $USER:$USER .
+          composer install
       - name: Setting Docker
         run: |
           sudo curl -L "https://github.com/docker/compose/releases/download/v2.27.1/docker-compose-$(uname -s)-$(uname -m)" -o /usr/local/bin/docker-compose
@@ -41,19 +40,19 @@ jobs:
           docker-compose build
           docker-compose up -d
           docker ps -a
-          docker-compose exec -T php composer install --prefer-dist --no-progress --no-suggest
       - name: Setting JWT
         run: |
           php bin/console lexik:jwt:generate-keypair
       - name: Setting test environment and DB
-        #        проверяйте название контейнера и БД
+#        проверяйте название контейнера и БД
         run: |
-          echo "DATABASE_URL=pgsql://postgres:admin@postgres:5432/study_on" >> .env.test.local
+          echo "DATABASE_URL=pgsql://postgres:admin@study-onbilling-postgres-1:5432/study_on" >> .env.test.local
           ls -la
           docker ps -a
           docker-compose exec -T php bin/console doctrine:database:drop --force --env=test || true
           docker-compose exec -T php bin/console doctrine:database:create --env=test
           docker-compose exec -T php bin/console doctrine:migrations:migrate -n --env=test
-          docker-compose exec -T php bin/console doctrine:fixtures:load -n --group=AppFixtures --env=test
+          docker-compose exec -T php bin/console doctrine:fixtures:load -n --env=test
+          docker-compose exec -T php bin/phpunit
       - name: run PHPUnit
         run: docker-compose exec -T php bin/phpunit
