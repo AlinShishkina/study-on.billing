@@ -1,16 +1,18 @@
 name: CI
-
 on:
   push:
-    branches: [ "main" ]
+    branches: [ "master" ]
   workflow_dispatch:
-
 jobs:
   build:
     runs-on: ubuntu-latest
+    #   ubuntu-latest должна работать стабильно, можно указать явно другую версию
+    #   steps можно сильнее разбить на категории и поправить
+    #   steps можно сильнее разбить на категории и поправить
+    #   тут представлен пример только для запуска тестов. Можно еще проверять код-стайл и mailer
+    #   часто встречается на рабочих проектах
     steps:
       - uses: actions/checkout@v4
-
       - name: Setup PHP
         uses: shivammathur/setup-php@v2
         with:
@@ -18,28 +20,19 @@ jobs:
           extensions: mbstring, xml, ctype, iconv, intl, pdo_mysql
           coverage: pcov
           tools: composer
-
-      - name: Configure environment files
+      - name: Setting environment and composer
+#        тут тоже что-то можно изменить :)
         run: |
+          git config --global --add safe.directory /app
           cat << EOF > .env.local
-          DATABASE_URL="pgsql://postgres:admin@postgres:5432/study_on_billing"
+          DATABASE_URL=pgsql://pguser:pguser@postgres:5432/study_on_billing
           JWT_SECRET_KEY="%kernel.project_dir%/config/jwt/private.pem"
           JWT_PUBLIC_KEY="%kernel.project_dir%/config/jwt/public.pem"
-          JWT_PASSPHRASE=passphrase
+          JWT_PASSPHRASE="1234"
           EOF
           cat .env.local
-          cat << EOF > .env.test.local
-          DATABASE_URL=pgsql://postgres:admin@postgres:5432/study_on_billing_test
-          JWT_SECRET_KEY=%kernel.project_dir%/config/jwt/private.pem
-          JWT_PUBLIC_KEY=%kernel.project_dir%/config/jwt/public.pem
-          JWT_PASSPHRASE=passphrase
-          EOF
-          cat .env.test.local
-
-      - name: Install Composer dependencies
-        run: composer install --no-progress --no-suggest --prefer-dist
-
-      - name: Setup Docker Compose
+          composer install
+      - name: Setting Docker
         run: |
           sudo curl -L "https://github.com/docker/compose/releases/download/v2.27.1/docker-compose-$(uname -s)-$(uname -m)" -o /usr/local/bin/docker-compose
           sudo chmod +x /usr/local/bin/docker-compose
@@ -47,26 +40,19 @@ jobs:
           docker-compose build
           docker-compose up -d
           docker ps -a
-
-      - name: Generate JWT keys
+      - name: Setting JWT
         run: |
           php bin/console lexik:jwt:generate-keypair
-          php bin/console lexik:jwt:check-config
-
-      - name: Prepare test database and run migrations
+      - name: Setting test environment and DB
+#        проверяйте название контейнера и БД
         run: |
+          echo "DATABASE_URL=pgsql://pguser:pguser@postgres:5432/study_on_billing" >> .env.test.local
+          ls -la
+          docker ps -a
           docker-compose exec -T php bin/console doctrine:database:drop --force --env=test || true
           docker-compose exec -T php bin/console doctrine:database:create --env=test
           docker-compose exec -T php bin/console doctrine:migrations:migrate -n --env=test
           docker-compose exec -T php bin/console doctrine:fixtures:load -n --env=test
-
-      - name: Run PHPUnit tests
+          docker-compose exec -T php bin/phpunit
+      - name: run PHPUnit
         run: docker-compose exec -T php bin/phpunit
-
-      - name: Add label 'tested' to PR
-        if: github.event_name == 'pull_request'
-        uses: actions-ecosystem/action-add-labels@v1
-        with:
-          labels: tested
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
