@@ -6,11 +6,6 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
-    #   ubuntu-latest должна работать стабильно, можно указать явно другую версию
-    #   steps можно сильнее разбить на категории и поправить
-    #   steps можно сильнее разбить на категории и поправить
-    #   тут представлен пример только для запуска тестов. Можно еще проверять код-стайл и mailer
-    #   часто встречается на рабочих проектах
     steps:
       - uses: actions/checkout@v4
       - name: Setup PHP
@@ -21,16 +16,22 @@ jobs:
           coverage: pcov
           tools: composer
       - name: Setting environment and composer
-#        тут тоже что-то можно изменить :)
         run: |
           git config --global --add safe.directory /app
-          cat << EOF > .env
-          DATABASE_URL="pgsql://postgres:admin@study-onbilling-postgres-1:5432/study_on"
+          cat << EOF > .env.local
+          DATABASE_URL="pgsql://postgres:admin@postgres:5432/study_on_billing"
           JWT_SECRET_KEY="%kernel.project_dir%/config/jwt/private.pem"
           JWT_PUBLIC_KEY="%kernel.project_dir%/config/jwt/public.pem"
-          JWT_PASSPHRASE="1234"
+          JWT_PASSPHRASE=passphrase
           EOF
           cat .env.local
+          cat << EOF > .env.test.local
+          DATABASE_URL=pgsql://postgres:admin@postgres:5432/study_on_billing_test
+          JWT_SECRET_KEY=%kernel.project_dir%/config/jwt/private.pem
+          JWT_PUBLIC_KEY=%kernel.project_dir%/config/jwt/public.pem
+          JWT_PASSPHRASE=passphrase
+          EOF
+          cat .env.test.local
           composer install
       - name: Setting Docker
         run: |
@@ -43,10 +44,10 @@ jobs:
       - name: Setting JWT
         run: |
           php bin/console lexik:jwt:generate-keypair
+          php bin/console lexik:jwt:check-config
       - name: Setting test environment and DB
-#        проверяйте название контейнера и БД
         run: |
-          echo "DATABASE_URL=pgsql://postgres:admin@study-onbilling-postgres-1:5432/study_on" >> .env.test
+          echo "DATABASE_URL=pgsql://postgres:admin@postgres:5432/study_on_billing_test" >> .env.test.local
           ls -la
           docker ps -a
           docker-compose exec -T php bin/console doctrine:database:drop --force --env=test || true
