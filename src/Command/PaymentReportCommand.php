@@ -51,7 +51,11 @@ class PaymentReportCommand extends Command
         
         $this->mailer->send($email);
         
-        $output->writeln('Отчет отправлен на' . $this->reportEmail);
+        
+        $output->writeln('Отчет отправлен на ' . $this->reportEmail);
+        // В методе execute команды
+$output->writeln('Generated HTML:');
+$output->writeln($html); // Проверьте сгенерированный HTML
         
         return Command::SUCCESS;
     }

@@ -1,42 +1,62 @@
-{# templates/email/monthly_report.html.twig #}
-{% extends 'email.html.twig' %}
-
-{% block css %}
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>{% block subject %}{% endblock %}</title>
     <style>
-        th + th {
-            margin-left: 10px;
+        body {
+            font-family: Arial, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            margin: 0;
+            padding: 0;
+            background-color: #f9f9f9;
         }
+        .email-container {
+            max-width: 600px;
+            margin: 20px auto;
+            padding: 20px;
+            background-color: #ffffff;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        .email-header {
+            border-bottom: 1px solid #eee;
+            padding-bottom: 15px;
+            margin-bottom: 20px;
+        }
+        .email-footer {
+            margin-top: 30px;
+            padding-top: 15px;
+            border-top: 1px solid #eee;
+            text-align: center;
+            color: #777;
+            font-size: 0.9em;
+        }
+        h1, h2, h3 {
+            color: #2c3e50;
+        }
+        p {
+            margin: 0 0 15px 0;
+        }
+        {% block css %}{% endblock %}
     </style>
-{% endblock %}
-
-{% block title %}
-    <p>Отчет об оплаченных курсах за период {{ period.from|date('d.m.Y') }} - {{ period.to|date('d.m.Y') }}</p>
-{% endblock %}
-
-{% block body %}
-    <table class="table table-light table__report_info">
-        <thead>
-            <tr>
-                <th>Название курса</th>
-                <th>Тип курса</th>
-                <th>Число аренд/покупок</th>
-                <th>Общая сумма</th>
-            </tr>
-        </thead>
-        <tbody>
-            {% for course in courses %}
-                <tr>
-                    <td>{{ course.name }}</td>
-                    <td>{{ course.type }}</td>
-                    <td>{{ course.transactions_count }}</td>
-                    <td>{{ course.course_amount }}</td>
-                </tr>
-            {% else %}
-                <tr>
-                    <td colspan="4">Нет информации об оплате курсов</td>
-                </tr>
-            {% endfor %}
-        </tbody>
-    </table>
-    <p>Итого: {{ total_paid }}</p>
-{% endblock %}
+</head>
+<body>
+    <div class="email-container">
+        <div class="email-header">
+            <img src="https://study-on.local/logo.png" alt="StudyOn Logo" style="max-height: 60px; display: block; margin: 0 auto;">
+        </div>
+        
+        <div class="email-content">
+            {% block title %}{% endblock %}
+            {% block body %}{% endblock %}
+        </div>
+        
+        <div class="email-footer">
+            <p>&copy; {{ "now"|date("Y") }} StudyOn Platform</p>
+            <p>Это автоматическое сообщение, пожалуйста, не отвечайте на него</p>
+        </div>
+    </div>
+</body>
+</html>

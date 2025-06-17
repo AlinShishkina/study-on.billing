@@ -31,45 +31,51 @@ class PaymentEndingNotificationCommand extends Command
 
         $usersCourses = [];
         foreach ($endingCourses as $transaction) {
-            $user = $transaction->getBillingUser();
+            $user = $transaction->getClient();
             $course = $transaction->getCourse();
+            $expiresAt = $transaction->getExpiresAt();
 
-            if (!isset($usersCourses[$user->getId()])) {
-                $usersCourses[$user->getId()] = [
+            // Пропускаем транзакции с отсутствующими данными
+            if (!$user || !$course || !$expiresAt) {
+                continue;
+            }
+
+            $userId = $user->getId();
+            if (!isset($usersCourses[$userId])) {
+                $usersCourses[$userId] = [
                     'user' => $user,
                     'courses' => [],
                 ];
             }
 
-            
-            $expiresAt = $transaction->getExpiresAt();
-            if ($expiresAt instanceof \DateTime) {
-                $expiresAt = \DateTimeImmutable::createFromMutable($expiresAt);
-            }
-
-            $usersCourses[$user->getId()]['courses'][] = [
+            $usersCourses[$userId]['courses'][] = [
                 'title' => $course->getCode(),
                 'expires_at' => $expiresAt,
             ];
         }
 
+        $sentCount = 0;
         foreach ($usersCourses as $userData) {
-            $html = $this->twig->render('email/ending_notification.html.twig', [
-                'user' => $userData['user'],
-                'courses' => $userData['courses'],
-            ]);
+            try {
+                $html = $this->twig->render('email/ending_notification.html.twig', [
+                    'user' => $userData['user'],
+                    'courses' => $userData['courses'],
+                ]);
 
-            $email = (new Email())
-                ->from('no-reply@study-on.local')
-                ->to($userData['user']->getEmail())
-                ->subject('Уведомление о окончании аренды курса')
-                ->html($html);
+                $email = (new Email())
+                    ->from('no-reply@study-on.local')
+                    ->to($userData['user']->getEmail())
+                    ->subject('Уведомление о окончании аренды курса')
+                    ->html($html);
 
-            $this->mailer->send($email);
+                $this->mailer->send($email);
+                $sentCount++;
+            } catch (\Exception $e) {
+                $output->writeln('Ошибка отправки: ' . $e->getMessage());
+            }
         }
 
-        $output->writeln(sprintf('Отправлено %d уведомлений', count($usersCourses)));
-
+        $output->writeln(sprintf('Отправлено %d уведомлений', $sentCount));
         return Command::SUCCESS;
     }
 }

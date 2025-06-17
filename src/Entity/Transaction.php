@@ -33,7 +33,7 @@ class Transaction
     #[ORM\Column(type: Types::DECIMAL, precision: 10, scale: 2)]
     private ?string $amount = null;
 
-    #[ORM\Column(name: "created_at", type: Types::DATETIME_IMMUTABLE)]
+    #[ORM\Column(name: "created_at", type: Types::DATETIME_IMMUTABLE, nullable: true)]
     private ?\DateTimeImmutable $createdAt = null;
 
     #[ORM\Column(name: "expires_at", type: Types::DATETIME_IMMUTABLE, nullable: true)]
@@ -93,7 +93,7 @@ class Transaction
         return $this->createdAt;
     }
 
-    public function setCreatedAt(\DateTimeImmutable $createdAt): static
+    public function setCreatedAt(?\DateTimeImmutable $createdAt): static
     {
         $this->createdAt = $createdAt;
         return $this;
@@ -109,7 +109,7 @@ class Transaction
         $this->expiresAt = $expiresAt;
         return $this;
     }
-
+    
     public function getTypeName(): string
     {
         return array_flip(self::TYPE_NAMES)[$this->type] ?? 'unknown';

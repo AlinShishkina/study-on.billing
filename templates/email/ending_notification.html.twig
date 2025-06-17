@@ -1,12 +1,32 @@
-{# templates/email/ending_notification.html.twig #}
 {% extends 'email.html.twig' %}
 
 {% block title %}
+    <h2>Уведомление об окончании аренды</h2>
     <p>Уважаемый клиент! У вас есть курсы, срок аренды которых подходит к концу:</p>
 {% endblock %}
 
 {% block body %}
-    {% for course in courses %}
-        <p>"{{ course.name }}" действует до {{ course.expires_at|date('d.m.Y H:i') }}</p>
-    {% endfor %}
+    <ul style="list-style-type: none; padding: 0; margin: 20px 0;">
+        {% for course in courses %}
+            <li style="margin-bottom: 15px; padding: 12px; background-color: #f8f9fa; border-radius: 4px;">
+                <strong style="display: block; font-size: 1.1em;">{{ course.name }}</strong>
+                <span>Действует до: {{ course.expires_at|date('d.m.Y H:i') }}</span>
+            </li>
+        {% else %}
+            <li style="padding: 12px; text-align: center; font-style: italic;">
+                Нет активных курсов
+            </li>
+        {% endfor %}
+    </ul>
+{% endblock %}
+
+{% block css %}
+    <style>
+        .course-item {
+            margin-bottom: 15px;
+            padding: 12px;
+            background-color: #f8f9fa;
+            border-radius: 4px;
+        }
+    </style>
 {% endblock %}
