@@ -1,7 +1,7 @@
 name: CI
 on:
   push:
-    branches: [ "main" ]
+    branches: [ "master" ]
   workflow_dispatch:
 jobs:
   build:
@@ -26,19 +26,21 @@ jobs:
           composer install
       - name: Setting Docker
         run: |
-         sudo curl -L "https://github.com/docker/compose/releases/download/v2.27.1/docker-compose-$(uname -s)-$(uname -m)" -o /usr/local/bin/docker-compose
-         sudo chmod +x /usr/local/bin/docker-compose
-         docker-compose --version
-         mkdir ~/.yarn
-         docker network create study-onbilling_default
-         docker-compose build
-         docker-compose up -d
-         docker-compose run -u root node yarn install
-         docker-compose run -u root node yarn encore dev
-         docker ps -a
+          sudo curl -L "https://github.com/docker/compose/releases/download/v2.27.1/docker-compose-$(uname -s)-$(uname -m)" -o /usr/local/bin/docker-compose
+          sudo chmod +x /usr/local/bin/docker-compose
+          docker-compose --version
+          mkdir ~/.yarn
+        # нужно создать сеть, так как в github Actions study-on изолирован от биллинга
+          docker network create study-onbilling_default
+          docker-compose build
+          docker-compose up -d
+          docker-compose run -u root node yarn install
+          docker-compose run -u root node yarn encore dev
+          docker ps -a
       - name: Setting test environment and DB
+        # скорректируйте название БД и контейнера, если нужно
         run: |
-          echo "DATABASE_URL=pgsql://pguser:pguser@postgres:5432/study_on" >> .env.test.local
+          echo "DATABASE_URL=pgsql://pguser:pguser@study-on_postgres_1:5432/study_on" >> .env.test.local
           ls -la
           docker ps -a
           docker-compose exec -T php bin/console doctrine:database:drop --force --env=test || true
