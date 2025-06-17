@@ -24,7 +24,7 @@ jobs:
 #        тут тоже что-то можно изменить :)
         run: |
           git config --global --add safe.directory /app
-          cat << EOF > .env.local
+          cat << EOF > .env
           DATABASE_URL="pgsql://postgres:admin@study-onbilling-postgres-1:5432/study_on"
           JWT_SECRET_KEY="%kernel.project_dir%/config/jwt/private.pem"
           JWT_PUBLIC_KEY="%kernel.project_dir%/config/jwt/public.pem"
@@ -46,7 +46,7 @@ jobs:
       - name: Setting test environment and DB
 #        проверяйте название контейнера и БД
         run: |
-          echo "DATABASE_URL=pgsql://postgres:admin@study-onbilling-postgres-1:5432/study_on" >> .env.test.local
+          echo "DATABASE_URL=pgsql://postgres:admin@study-onbilling-postgres-1:5432/study_on" >> .env.test
           ls -la
           docker ps -a
           docker-compose exec -T php bin/console doctrine:database:drop --force --env=test || true
