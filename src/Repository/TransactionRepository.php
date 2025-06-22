@@ -51,28 +51,27 @@ class TransactionRepository extends ServiceEntityRepository
 
         if ($skipExpired) {
             $qb->andWhere('t.expiresAt > :now OR t.expiresAt IS NULL')
-                ->setParameter('now', new DateTime(), Types::DATETIME_IMMUTABLE);
+                ->setParameter('now', new DateTime(), 'datetime');
         }
 
         return $qb->getQuery()->getResult();
     }
 
     /**
-     * Найти транзакции с окончанием срока действия в ближайшее время (например, в течение суток)
+     * Найти транзакции с окончанием срока действия в указанном диапазоне дат
      *
+     * @param DateTime $start
+     * @param DateTime $end
      * @return Transaction[]
      */
-    public function findCoursesEndingSoon(): array
+    public function findCoursesEndingSoon(DateTime $start, DateTime $end): array
     {
-        $start = new DateTime();
-        $end = (clone $start)->modify('+1 day');
-
         return $this->createQueryBuilder('t')
             ->andWhere('t.type = :type')
             ->andWhere('t.expiresAt BETWEEN :start AND :end')
-            ->setParameter('type', Transaction::TYPE_NAMES['payment']) // или конкретное число типа платежа
-            ->setParameter('start', $start, Types::DATETIME_IMMUTABLE)
-            ->setParameter('end', $end, Types::DATETIME_IMMUTABLE)
+            ->setParameter('type', Transaction::TYPE_NAMES['payment'])
+            ->setParameter('start', $start, 'datetime')
+            ->setParameter('end', $end, 'datetime')
             ->getQuery()
             ->getResult();
     }
@@ -85,22 +84,22 @@ class TransactionRepository extends ServiceEntityRepository
      * @return array
      */
     public function getMonthlyReportData(\DateTimeInterface $startDate, \DateTimeInterface $endDate): array
-{
-    return $this->createQueryBuilder('t')
-        ->select([
-            'c.code as course_code',  // заменить title на code
-            't.type',
-            'COUNT(t.id) as count',
-            'SUM(t.amount) as amount',
-        ])
-        ->join('t.course', 'c')
-        ->where('t.createdAt BETWEEN :start AND :end')
-        ->andWhere('t.type = :type')
-        ->setParameter('start', $startDate, Types::DATETIME_IMMUTABLE)
-        ->setParameter('end', $endDate, Types::DATETIME_IMMUTABLE)
-        ->setParameter('type', Transaction::TYPE_NAMES['payment'], Types::SMALLINT)
-        ->groupBy('c.id', 't.type')
-        ->getQuery()
-        ->getArrayResult();
-}
+    {
+        return $this->createQueryBuilder('t')
+            ->select([
+                'c.code as course_code',
+                't.type',
+                'COUNT(t.id) as count',
+                'SUM(t.amount) as amount',
+            ])
+            ->join('t.course', 'c')
+            ->where('t.createdAt BETWEEN :start AND :end')
+            ->andWhere('t.type = :type')
+            ->setParameter('start', $startDate, 'datetime')
+            ->setParameter('end', $endDate, 'datetime')
+            ->setParameter('type', Transaction::TYPE_NAMES['payment'], Types::SMALLINT)
+            ->groupBy('c.id', 't.type')
+            ->getQuery()
+            ->getArrayResult();
+    }
 }

@@ -7,7 +7,7 @@ use Doctrine\DBAL\Types\Types;
 use Doctrine\ORM\Mapping as ORM;
 
 #[ORM\Entity(repositoryClass: TransactionRepository::class)]
-#[ORM\Table(name: 'transaction')]
+#[ORM\Table(name: '`transaction`')]
 class Transaction
 {
     public const TYPE_NAMES = [
@@ -20,11 +20,11 @@ class Transaction
     #[ORM\Column]
     private ?int $id = null;
 
-    #[ORM\ManyToOne(inversedBy: 'transactions')]
-    #[ORM\JoinColumn(nullable: false)]
+    #[ORM\ManyToOne(targetEntity: User::class, inversedBy: 'transactions')]
+    #[ORM\JoinColumn(name: "billing_user_id", referencedColumnName: "id", nullable: false)]
     private ?User $client = null;
 
-    #[ORM\ManyToOne(inversedBy: 'transactions')]
+    #[ORM\ManyToOne(targetEntity: Course::class, inversedBy: 'transactions')]
     private ?Course $course = null;
 
     #[ORM\Column(type: Types::SMALLINT)]
@@ -33,11 +33,11 @@ class Transaction
     #[ORM\Column(type: Types::DECIMAL, precision: 10, scale: 2)]
     private ?string $amount = null;
 
-    #[ORM\Column(name: "created_at", type: Types::DATETIME_IMMUTABLE, nullable: true)]
-    private ?\DateTimeImmutable $createdAt = null;
+    #[ORM\Column(name: "created_at", type: Types::DATETIME_MUTABLE, nullable: true)]
+    private ?\DateTime $createdAt = null;
 
-    #[ORM\Column(name: "expires_at", type: Types::DATETIME_IMMUTABLE, nullable: true)]
-    private ?\DateTimeImmutable $expiresAt = null;
+    #[ORM\Column(name: "expires_at", type: Types::DATETIME_MUTABLE, nullable: true)]
+    private ?\DateTime $expiresAt = null;
 
     public function getId(): ?int
     {
@@ -88,23 +88,23 @@ class Transaction
         return $this;
     }
 
-    public function getCreatedAt(): ?\DateTimeImmutable
+    public function getCreatedAt(): ?\DateTime
     {
         return $this->createdAt;
     }
 
-    public function setCreatedAt(?\DateTimeImmutable $createdAt): static
+    public function setCreatedAt(?\DateTime $createdAt): static
     {
         $this->createdAt = $createdAt;
         return $this;
     }
 
-    public function getExpiresAt(): ?\DateTimeImmutable
+    public function getExpiresAt(): ?\DateTime
     {
         return $this->expiresAt;
     }
 
-    public function setExpiresAt(?\DateTimeImmutable $expiresAt): static
+    public function setExpiresAt(?\DateTime $expiresAt): static
     {
         $this->expiresAt = $expiresAt;
         return $this;

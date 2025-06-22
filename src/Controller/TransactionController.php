@@ -102,7 +102,7 @@ class TransactionController extends AbstractController
         $transactions = $transactionService->filter(
             array_merge(
                 $filter,
-                ['client' => $this->getUser()->getId()]
+                ['billingUser' => $this->getUser()->getId()]
             )
         );
 

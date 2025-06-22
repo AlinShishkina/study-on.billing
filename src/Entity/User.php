@@ -4,6 +4,8 @@ namespace App\Entity;
 
 use App\DTO\UserDto;
 use App\Repository\UserRepository;
+use Doctrine\Common\Collections\ArrayCollection;
+use Doctrine\Common\Collections\Collection;
 use Doctrine\ORM\Mapping as ORM;
 use Symfony\Component\Security\Core\User\PasswordAuthenticatedUserInterface;
 use Symfony\Component\Security\Core\User\UserInterface;
@@ -36,8 +38,15 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
     #[ORM\Column]
     private ?float $balance = 0.0;
 
+    /**
+     * @var Collection<int, Transaction>
+     */
+    #[ORM\OneToMany(targetEntity: Transaction::class, mappedBy: 'client')]
+    private Collection $transactions;
+
     public function __construct()
     {
+        $this->transactions = new ArrayCollection();
     }
 
     public function getId(): ?int
@@ -56,41 +65,24 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
         return $this;
     }
 
-    /**
-     * A visual identifier that represents this user.
-     *
-     * @see UserInterface
-     */
     public function getUserIdentifier(): string
     {
         return (string) $this->email;
     }
 
-    /**
-     * @see UserInterface
-     *
-     * @return list<string>
-     */
     public function getRoles(): array
     {
         $roles = $this->roles;
-        // guarantee every user at least has ROLE_USER
         $roles[] = 'ROLE_USER';
         return array_unique($roles);
     }
 
-    /**
-     * @param list<string> $roles
-     */
     public function setRoles(array $roles): static
     {
         $this->roles = $roles;
         return $this;
     }
 
-    /**
-     * @see PasswordAuthenticatedUserInterface
-     */
     public function getPassword(): string
     {
         return $this->password;
@@ -102,21 +94,13 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
         return $this;
     }
 
-    /**
-     * Проверяет, совпадает ли переданный пароль с хешем пароля пользователя.
-     */
     public function validatePassword(string $plainPassword): bool
     {
         return password_verify($plainPassword, $this->password);
     }
 
-    /**
-     * @see UserInterface
-     */
     public function eraseCredentials(): void
     {
-        // Если вы храните временные данные, очищайте их здесь
-        // $this->plainPassword = null;
     }
 
     public function getBalance(): ?float
@@ -131,18 +115,39 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
     }
 
     /**
-     * Создаёт пользователя из DTO, хеширует пароль.
+     * @return Collection<int, Transaction>
      */
+    public function getTransactions(): Collection
+    {
+        return $this->transactions;
+    }
+
+    public function addTransaction(Transaction $transaction): static
+    {
+        if (!$this->transactions->contains($transaction)) {
+            $this->transactions->add($transaction);
+            $transaction->setClient($this);
+        }
+        return $this;
+    }
+
+    public function removeTransaction(Transaction $transaction): static
+    {
+        if ($this->transactions->removeElement($transaction)) {
+            if ($transaction->getClient() === $this) {
+                $transaction->setClient(null);
+            }
+        }
+        return $this;
+    }
+
     public static function convertDtoToUser(UserDto $userDto): User
     {
         $user = new self();
         $user->setRoles(['ROLE_USER']);
         $user->setEmail($userDto->username);
         $user->setBalance(0);
-
-        // Используем bcrypt для хеширования пароля
         $user->setPassword(password_hash($userDto->password, PASSWORD_BCRYPT));
-
         return $user;
     }
 }

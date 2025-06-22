@@ -28,7 +28,7 @@ class PaymentService
             $this->em->persist($user);
 
             $transaction = new Transaction();
-            $currentDate = new \DateTimeImmutable();
+            $currentDate = new \DateTime();
             $courseType = $course->getTypeName();
 
             $transaction->setCourse($course);
@@ -58,7 +58,7 @@ class PaymentService
         $this->em->beginTransaction();
         try {
             $transaction = new Transaction();
-            $currentDate = new \DateTimeImmutable();
+            $currentDate = new \DateTime();
 
             $transaction->setClient($user);
             $transaction->setType(Transaction::TYPE_NAMES['deposit']);

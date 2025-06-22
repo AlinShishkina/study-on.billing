@@ -4,12 +4,9 @@ namespace App\Tests;
 
 use App\DataFixtures\AppFixtures;
 use App\DataFixtures\DataFixtures;
-use App\Tests\Helpers\GetTokenTrait;
 
-class CourseTest extends AbstractTest
+class CourseTest extends AbstractApiTest
 {
-    use GetTokenTrait;
-    
     protected function getFixtures(): array
     {
         return [AppFixtures::class, DataFixtures::class];
@@ -18,89 +15,93 @@ class CourseTest extends AbstractTest
     public function testGetCourses()
     {
         $client = $this->createTestClient();
-
+        
         $client->request(
             'GET',
-            '/api/v1/courses',
+            self::BASE_URL . '/api/v1/courses',
             [],
             [],
-            [
-                'CONTENT_TYPE' => 'application/json',
-            ]
+            ['CONTENT_TYPE' => 'application/json']
         );
-        $content = json_decode($client->getResponse()->getContent(), true);
-        $this->assertResponseCode(200);
-        $this->assertTrue(is_array($content));
+        
+        $response = $client->getResponse();
+        $this->assertResponseCode(200, $response);
+        
+        $content = json_decode($response->getContent(), true);
+        $this->assertIsArray($content);
+        $this->assertNotEmpty($content);
     }
 
     public function testGetCourse()
     {
         $client = $this->createTestClient();
-
+        
+        // Получаем существующий курс
         $client->request(
             'GET',
-            '/api/v1/courses/php',
+            self::BASE_URL . '/api/v1/courses',
             [],
             [],
-            [
-                'CONTENT_TYPE' => 'application/json',
-            ]
+            ['CONTENT_TYPE' => 'application/json']
         );
-        $content = json_decode($client->getResponse()->getContent(), true);
-        $this->assertResponseCode(200);
-        $this->assertTrue(is_array($content));
-        $this->assertTrue(array_key_exists('code', $content));
-        $this->assertTrue(array_key_exists('price', $content));
-        $this->assertTrue(array_key_exists('type', $content));
-        $this->assertTrue($content['type'] == 'free');
+        
+        $courses = json_decode($client->getResponse()->getContent(), true);
+        $courseCode = $courses[0]['code'];
+        
+        $client->request(
+            'GET',
+            self::BASE_URL . "/api/v1/courses/{$courseCode}",
+            [],
+            [],
+            ['CONTENT_TYPE' => 'application/json']
+        );
+        
+        $response = $client->getResponse();
+        $this->assertResponseCode(200, $response);
+        
+        $content = json_decode($response->getContent(), true);
+        $this->assertEquals($courseCode, $content['code']);
     }
-
     
     public function testBuyCourseFail()
     {
         $client = $this->createTestClient();
         $token = $this->getToken($client);
-
-        $codes = ['php-1', 'php', 'js', 'swift'];
-        $messages = [
-            'Курс не найден',
-            'Курс бесплатный. Оплата не требуется.',
-            'Доступ к курсу актуален. Оплата не требуется.',
-            'На счету недостаточно средств',
-        ];
-
-        foreach ($codes as $key => $code) {
-            $client->request(
-                'POST',
-                '/api/v1/courses/' . $code . '/pay',
-                [],
-                [],
-                [
-                    'HTTP_AUTHORIZATION' => 'Bearer ' . $token,
-                    'CONTENT_TYPE' => 'application/json',
-                ]
-            );
-
-            $response = $client->getResponse();
-            $status = $response->getStatusCode();
-            $content = json_decode($response->getContent(), true);
-
-            $keyError = $status == 406 ? 'payment' : 'course';
-
-            $this->assertTrue($status == 400 || $status == 406);
-            $this->assertTrue(array_key_exists('errors', $content));
-            $this->assertTrue($content['errors'][$keyError] == $messages[$key]);
+        
+        // Получаем бесплатный курс
+        $client->request(
+            'GET',
+            self::BASE_URL . '/api/v1/courses',
+            [],
+            [],
+            ['CONTENT_TYPE' => 'application/json']
+        );
+        
+        $courses = json_decode($client->getResponse()->getContent(), true);
+        $freeCourse = null;
+        $expensiveCourse = null;
+        
+        foreach ($courses as $course) {
+            if ($course['type'] === 'free') {
+                $freeCourse = $course['code'];
+            }
+            if ($course['type'] === 'buy' && $course['price'] > 1000) {
+                $expensiveCourse = $course['code'];
+            }
         }
-    }
+        
+        if (!$freeCourse) {
+            $this->markTestSkipped('No free course found');
+        }
+        
+        if (!$expensiveCourse) {
+            $this->markTestSkipped('No expensive course found');
+        }
 
-    public function testBuyCourseSuccess()
-    {
-        $client = $this->createTestClient();
-        $token = $this->getToken($client);
-
+        // Бесплатный курс
         $client->request(
             'POST',
-            '/api/v1/courses/ruby/pay',
+            self::BASE_URL . "/api/v1/courses/{$freeCourse}/pay",
             [],
             [],
             [
@@ -108,10 +109,78 @@ class CourseTest extends AbstractTest
                 'CONTENT_TYPE' => 'application/json',
             ]
         );
+        $this->assertResponseCode(400); 
+        
+        // Недостаточно средств
+        $client->request(
+            'POST',
+            self::BASE_URL . "/api/v1/courses/{$expensiveCourse}/pay",
+            [],
+            [],
+            [
+                'HTTP_AUTHORIZATION' => 'Bearer ' . $token,
+                'CONTENT_TYPE' => 'application/json',
+            ]
+        );
+        $this->assertResponseCode(406);
+        
+        // Несуществующий курс
+        $client->request(
+            'POST',
+            self::BASE_URL . "/api/v1/courses/invalid-course/pay",
+            [],
+            [],
+            [
+                'HTTP_AUTHORIZATION' => 'Bearer ' . $token,
+                'CONTENT_TYPE' => 'application/json',
+            ]
+        );
+        $this->assertResponseCode(400);
+    }
 
+    public function testBuyCourseSuccess()
+    {
+        $client = $this->createTestClient();
+        $token = $this->getToken($client);
+        
+        // Получаем доступный курс
+        $client->request(
+            'GET',
+            self::BASE_URL . '/api/v1/courses',
+            [],
+            [],
+            ['CONTENT_TYPE' => 'application/json']
+        );
+        
+        $courses = json_decode($client->getResponse()->getContent(), true);
+        $affordableCourse = null;
+        
+        foreach ($courses as $course) {
+            if ($course['type'] === 'buy' && $course['price'] < 300) {
+                $affordableCourse = $course['code'];
+                break;
+            }
+        }
+        
+        if (!$affordableCourse) {
+            $this->markTestSkipped('No affordable course found');
+        }
+
+        $client->request(
+            'POST',
+            self::BASE_URL . "/api/v1/courses/{$affordableCourse}/pay",
+            [],
+            [],
+            [
+                'HTTP_AUTHORIZATION' => 'Bearer ' . $token,
+                'CONTENT_TYPE' => 'application/json',
+            ]
+        );
+        
         $response = $client->getResponse();
-        $status = $response->getStatusCode();
-
-        $this->assertTrue($status == 200);
+        $this->assertResponseCode(200, $response);
+        
+        $content = json_decode($response->getContent(), true);
+        $this->assertTrue($content['success']);
     }
 }

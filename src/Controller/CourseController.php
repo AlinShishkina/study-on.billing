@@ -287,7 +287,7 @@ class CourseController extends AbstractController
 
         // проверяю что пользователь не совершал актуальных действия покупки с этим курсом
         $transactions = $transactionService->filter([
-            'client' => $user->getId(),
+            'billingUser' => $user->getId(),
             'course_code' => $request->get('code'),
             'type' => 'payment',
             'skip_expired' => true

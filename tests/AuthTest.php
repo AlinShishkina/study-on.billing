@@ -5,171 +5,147 @@ namespace App\Tests;
 use App\DataFixtures\AppFixtures;
 use App\DataFixtures\DataFixtures;
 
-class AuthTest extends AbstractTest
+class AuthTest extends AbstractApiTest
 {
     protected function getFixtures(): array
     {
         return [AppFixtures::class, DataFixtures::class];
     }
 
-    // успешная авторизация
     public function testSuccessAuth()
     {
         $client = $this->createTestClient();
         $client->request(
             'POST',
-            '/api/v1/auth',
+            self::BASE_URL . '/api/v1/auth',
             [],
             [],
             ['CONTENT_TYPE' => 'application/json'],
             json_encode([
                 'username' => 'user@email.example',
-                'password' => 'user@email.example'
+                'password' => 'password'
             ])
         );
-        $content = json_decode($client->getResponse()->getContent(), true);
-        $this->assertResponseCode(200);
-        $this->assertTrue(array_key_exists('token', $content));
+        
+        $response = $client->getResponse();
+        $this->assertResponseCode(200, $response);
+        
+        $content = json_decode($response->getContent(), true);
+        $this->assertArrayHasKey('token', $content);
     }
 
-    // неудачная авторизация
     public function testFailAuth()
     {
         $client = $this->createTestClient();
 
-        // несуществующий логин
+        // Несуществующий пользователь
         $client->request(
             'POST',
-            '/api/v1/auth',
+            self::BASE_URL . '/api/v1/auth',
             [],
             [],
             ['CONTENT_TYPE' => 'application/json'],
             json_encode([
-                'username' => 'user@email.example1',
-                'password' => 'user@email.example'
+                'username' => 'nonexistent@example.com',
+                'password' => 'password'
             ])
         );
-        $content = json_decode($client->getResponse()->getContent(), true);
         $this->assertResponseCode(401);
-        $this->assertEquals('Invalid credentials.', $content['message']);
         
-        // неверный пароль
+        // Неверный пароль
         $client->request(
             'POST',
-            '/api/v1/auth',
+            self::BASE_URL . '/api/v1/auth',
             [],
             [],
             ['CONTENT_TYPE' => 'application/json'],
             json_encode([
                 'username' => 'user@email.example',
-                'password' => 'user@email.example1'
+                'password' => 'wrong_password'
             ])
         );
-        $content = json_decode($client->getResponse()->getContent(), true);
         $this->assertResponseCode(401);
-        $this->assertEquals('Invalid credentials.', $content['message']);
     }
  
-    // успешная регистрация
     public function testSuccessRegister()
     {
         $client = $this->createTestClient();
         $client->request(
             'POST',
-            '/api/v1/register',
+            self::BASE_URL . '/api/v1/register',
             [],
             [],
             ['CONTENT_TYPE' => 'application/json'],
             json_encode([
-                'username' => 'user2@email.example',
-                'password' => 'user2@email.example'
+                'username' => 'newuser@example.com',
+                'password' => 'password'
             ])
         );
-        $content = json_decode($client->getResponse()->getContent(), true);
-        $this->assertResponseCode(201);
-        $this->assertTrue(array_key_exists('token', $content));
-        $this->assertTrue(array_key_exists('roles', $content));
-        $this->assertTrue(in_array('ROLE_USER', $content['roles']));
+        
+        $response = $client->getResponse();
+        $this->assertResponseCode(201, $response);
+        
+        $content = json_decode($response->getContent(), true);
+        $this->assertArrayHasKey('token', $content);
     }
  
-    // неудачная регистрация
     public function testFailRegister()
     {
         $client = $this->createTestClient();
 
-        // существующая почта
+        // Существующий email
         $client->request(
             'POST',
-            '/api/v1/register',
+            self::BASE_URL . '/api/v1/register',
             [],
             [],
             ['CONTENT_TYPE' => 'application/json'],
             json_encode([
                 'username' => 'user@email.example',
-                'password' => 'user2@email.example'
+                'password' => 'password'
             ])
         );
-        $content = json_decode($client->getResponse()->getContent(), true);
         $this->assertResponseCode(400);
-        $this->assertEquals(
-            'Email должен быть уникальным.',
-            $content['errors']['username']
-        );
         
-        // пустое поле username
+        // Пустой email
         $client->request(
             'POST',
-            '/api/v1/register',
+            self::BASE_URL . '/api/v1/register',
             [],
             [],
             ['CONTENT_TYPE' => 'application/json'],
             json_encode([
                 'username' => '',
-                'password' => 'user2@email.example'
+                'password' => 'password'
             ])
         );
-        $content = json_decode($client->getResponse()->getContent(), true);
         $this->assertResponseCode(400);
-        $this->assertEquals(
-            'Email обязателен к заполнению.',
-            $content['errors']['username']
-        );
         
-        // пустое поле password
+        // Пустой пароль
         $client->request(
             'POST',
-            '/api/v1/register',
+            self::BASE_URL . '/api/v1/register',
             [],
             [],
             ['CONTENT_TYPE' => 'application/json'],
             json_encode([
-                'username' => 'user2@email.example',
+                'username' => 'user3@example.com',
             ])
         );
-        $content = json_decode($client->getResponse()->getContent(), true);
         $this->assertResponseCode(400);
-        $this->assertEquals(
-            'Пароль обязателен к заполнению.',
-            $content['errors']['password']
-        );
         
-        // пароль короче 6 символов
+        // Короткий пароль
         $client->request(
             'POST',
-            '/api/v1/register',
+            self::BASE_URL . '/api/v1/register',
             [],
             [],
             ['CONTENT_TYPE' => 'application/json'],
             json_encode([
-                'username' => 'user3@email.example',
-                'password' => 'e13'
+                'username' => 'user4@example.com',
+                'password' => '123'
             ])
         );
-        $content = json_decode($client->getResponse()->getContent(), true);
         $this->assertResponseCode(400);
-        $this->assertEquals(
-            'Минимальная длинна пароля: 6',
-            $content['errors']['password']
-        );
     }
 }

@@ -4,12 +4,9 @@ namespace App\Tests;
 
 use App\DataFixtures\AppFixtures;
 use App\DataFixtures\DataFixtures;
-use App\Tests\Helpers\GetTokenTrait;
 
-class TransactionTest extends AbstractTest
+class TransactionTest extends AbstractApiTest
 {
-    use GetTokenTrait;
-    
     protected function getFixtures(): array
     {
         return [AppFixtures::class, DataFixtures::class];
@@ -17,12 +14,47 @@ class TransactionTest extends AbstractTest
 
     public function testGetTransaction(): void
     {
-        $client = self::createTestClient();
+        $client = $this->createTestClient();
         $token = $this->getToken($client);
+        
+        // Совершаем покупку для генерации транзакций
+        $client->request(
+            'GET',
+            self::BASE_URL . '/api/v1/courses',
+            [],
+            [],
+            ['CONTENT_TYPE' => 'application/json']
+        );
+        
+        $courses = json_decode($client->getResponse()->getContent(), true);
+        $affordableCourse = null;
+        
+        foreach ($courses as $course) {
+            if ($course['type'] === 'buy' && $course['price'] < 300) {
+                $affordableCourse = $course['code'];
+                break;
+            }
+        }
+        
+        if (!$affordableCourse) {
+            $this->markTestSkipped('No affordable course found');
+        }
+
+        $client->request(
+            'POST',
+            self::BASE_URL . "/api/v1/courses/{$affordableCourse}/pay",
+            [],
+            [],
+            [
+                'HTTP_AUTHORIZATION' => 'Bearer ' . $token,
+                'CONTENT_TYPE' => 'application/json',
+            ]
+        );
+        $this->assertResponseCode(200);
 
         $client->request(
             'GET',
-            '/api/v1/transactions',
+            self::BASE_URL . '/api/v1/transactions',
             [],
             [],
             [
@@ -32,25 +64,61 @@ class TransactionTest extends AbstractTest
         );
 
         $response = $client->getResponse();
+        $this->assertResponseCode(200, $response);
+        
         $content = json_decode($response->getContent(), true);
-
-        $this->assertResponseOk($response);
         $this->assertIsArray($content);
+        $this->assertNotEmpty($content);
     }
 
     public function testGetTransactionWithFilter(): void
     {
-        $client = self::createTestClient();
+        $client = $this->createTestClient();
         $token = $this->getToken($client);
+        
+        // Совершаем покупку для генерации транзакций
+        $client->request(
+            'GET',
+            self::BASE_URL . '/api/v1/courses',
+            [],
+            [],
+            ['CONTENT_TYPE' => 'application/json']
+        );
+        
+        $courses = json_decode($client->getResponse()->getContent(), true);
+        $affordableCourse = null;
+        
+        foreach ($courses as $course) {
+            if ($course['type'] === 'buy' && $course['price'] < 300) {
+                $affordableCourse = $course['code'];
+                break;
+            }
+        }
+        
+        if (!$affordableCourse) {
+            $this->markTestSkipped('No affordable course found');
+        }
+
+        $client->request(
+            'POST',
+            self::BASE_URL . "/api/v1/courses/{$affordableCourse}/pay",
+            [],
+            [],
+            [
+                'HTTP_AUTHORIZATION' => 'Bearer ' . $token,
+                'CONTENT_TYPE' => 'application/json',
+            ]
+        );
+        $this->assertResponseCode(200);
 
         $filter = [
             'filter[type]' => 'payment',
-            'filter[skip_expired]' => 'true' // передаем как строку, т.к. в URL
+            'filter[skip_expired]' => 'true'
         ];
 
         $client->request(
             'GET',
-            '/api/v1/transactions?' . http_build_query($filter),
+            self::BASE_URL . '/api/v1/transactions?' . http_build_query($filter),
             [],
             [],
             [
@@ -60,20 +128,13 @@ class TransactionTest extends AbstractTest
         );
 
         $response = $client->getResponse();
+        $this->assertResponseCode(200, $response);
+        
         $content = json_decode($response->getContent(), true);
-
-        $this->assertResponseOk($response);
         $this->assertIsArray($content);
-
-        // Проверка, что нет транзакций с типом 'deposit'
-        $flagNotDeposit = true;
-        foreach ($content as $item) {
-            if (isset($item['type']) && $item['type'] === 'deposit') {
-                $flagNotDeposit = false;
-                break;
-            }
+        
+        foreach ($content as $transaction) {
+            $this->assertEquals('payment', $transaction['type']);
         }
-
-        $this->assertTrue($flagNotDeposit, 'В ответе не должно быть транзакций типа deposit');
     }
 }
