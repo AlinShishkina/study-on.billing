@@ -102,4 +102,20 @@ class TransactionRepository extends ServiceEntityRepository
             ->getQuery()
             ->getArrayResult();
     }
+
+    public function findByPeriodAndType(\DateTimeInterface $startDate, \DateTimeInterface $endDate, int $type): array
+    {
+        return $this->createQueryBuilder('t')
+            ->where('t.createdAt BETWEEN :start AND :end')
+            ->andWhere('t.type = :type')
+            ->setParameter('start', $startDate)
+            ->setParameter('end', $endDate)
+            ->setParameter('type', $type)
+            ->leftJoin('t.client', 'u')
+            ->addSelect('u')
+            ->leftJoin('t.course', 'c')
+            ->addSelect('c')
+            ->getQuery()
+            ->getResult();
+    }
 }
