@@ -37,6 +37,7 @@ jobs:
           sudo curl -L "https://github.com/docker/compose/releases/download/v2.27.1/docker-compose-$(uname -s)-$(uname -m)" -o /usr/local/bin/docker-compose
           sudo chmod +x /usr/local/bin/docker-compose
           docker-compose --version
+          docker network create study-onbilling_default
           docker-compose build
           docker-compose up -d
           docker ps -a
