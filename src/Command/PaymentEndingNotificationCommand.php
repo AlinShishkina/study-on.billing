@@ -46,7 +46,7 @@ class PaymentEndingNotificationCommand extends Command
             $course = $transaction->getCourse();
 
             if (!$course) {
-                continue; // Пропускаем если курс не найден
+                continue;
             }
 
             if (!isset($usersCourses[$user->getId()])) {
@@ -56,28 +56,36 @@ class PaymentEndingNotificationCommand extends Command
                 ];
             }
 
-            // Используем code вместо title
             $usersCourses[$user->getId()]['courses'][] = [
-                'code' => $course->getCode(), // Используем существующий метод getCode()
+                'code' => $course->getCode(),
                 'expires_at' => $transaction->getExpiresAt(),
             ];
         }
 
         foreach ($usersCourses as $userData) {
             $user = $userData['user'];
-            $output->writeln(sprintf(
-                'User: %s (%s), courses ending soon:',
-                $user->getEmail(),
-                $user->getId()
-            ));
+            $coursesInfo = [];
             
             foreach ($userData['courses'] as $course) {
-                $output->writeln(sprintf(
-                    ' - %s, expires at %s',
-                    $course['code'], // Используем code вместо title
-                    $course['expires_at'] ? $course['expires_at']->format('Y-m-d H:i:s') : 'N/A'
-                ));
+                $formattedDate = $course['expires_at']->format('d.m.Y H:i');
+                $coursesInfo[] = sprintf(
+                    '%s действует до %s',
+                    $course['code'],
+                    $formattedDate
+                );
             }
+            
+            $message = sprintf(
+                "Уважаемый клиент! У вас есть курсы, срок аренды которых подходит к концу: %s.",
+                implode('. ', $coursesInfo)
+            );
+            
+            $output->writeln(sprintf(
+                "User: %s (%s)\n%s",
+                $user->getEmail(),
+                $user->getId(),
+                $message
+            ));
         }
 
         foreach ($usersCourses as $userData) {
